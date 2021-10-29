@@ -1,9 +1,12 @@
 package com.interfacesgraphiqueset3d.tp5;
 
+import java.util.ArrayList;
+
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.PixmapIO;
@@ -16,6 +19,7 @@ import com.badlogic.gdx.math.collision.Ray;
 import com.badlogic.gdx.math.collision.Sphere;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.interfacesgraphiqueset3d.tp5.Lampe;
 
 public class Application extends ApplicationAdapter {
     private FitViewport viewport;
@@ -26,37 +30,39 @@ public class Application extends ApplicationAdapter {
     private Vector2 currentScreen;
     private Vector3 currentScene;
     private Vector3 tmpVector3;
+    private int screenWidth;
+    private int screenHeight;
+    private ArrayList<Sphere> scene;
 
     @Override
     public void create() {
         // Get screen dimensions, in pixels :
-        int screenWidth = Gdx.graphics.getWidth();
-        int screenHeight = Gdx.graphics.getHeight();
+        screenWidth = Gdx.graphics.getWidth();
+        screenHeight = Gdx.graphics.getHeight();
 
-        Vector3 centerSphere = new Vector3(-3.0f, 1.2f, 15.0f);
+        Vector3 centerSphere = new Vector3(0.0f, 0.0f, 60.0f);
         float radius = 3;
 
         Vector3 origin = new Vector3(0f, 0f, -10f);
-        Vector3 direction = new Vector3(0f, 0f, -1f);
+
+        scene = new ArrayList<Sphere>();
+
         // Initialisation des objets lampe(position,color)
+        //Lampe lampe1 = new Lampe(direction, radius, direction);
         Sphere sphere1 = new Sphere(centerSphere, radius);
-        Ray ray1 = new Ray(origin, direction);
+
+        scene.add(sphere1);
+
 
         // Create a camera with perspective view :
         camera = new PerspectiveCamera(50.0f, screenWidth, screenHeight);
-        camera.position.set(0f, 0f, -10f);
+        camera.position.set(origin);
         camera.lookAt(0, 0, 0);
         camera.near = 1f;
         camera.far = 500f;
         camera.update();
 
-        //Calculer l'intersection entre la sphere1 et ray1
-        Vector3 intersection = new Vector3();
         
-        if(Intersector.intersectRaySphere(ray1, centerSphere, radius, intersection)){
-            
-        }
-
         //Distance intersection et lampe
         
         //
@@ -65,9 +71,10 @@ public class Application extends ApplicationAdapter {
         // Create a viewport to convert coords of screen space into coords of scene
         // space.
         viewport = new FitViewport(screenWidth, screenHeight, camera);
+        
+        pixels = Pixmap.createFromFrameBuffer(0, 0, screenWidth, screenHeight);
 
         // Create an array of pixels, initialized with grey color :
-        pixels = Pixmap.createFromFrameBuffer(0, 0, screenWidth, screenHeight);
         for (int y = 0; y < screenHeight; y++) {
             for (int x = 0; x < screenWidth; x++) {
                 pixels.setColor(0.1f, 0.1f, 0.1f, 1f);
@@ -105,7 +112,10 @@ public class Application extends ApplicationAdapter {
         ScreenUtils.clear(0, 0, 0, 1);
 
         // Process pixels color :
-        processPixel();
+        //processPixel();
+        lancerRayon(screenWidth, screenHeight, scene);
+
+        textureWithPixels.draw(pixels,0,0);
 
         // Render the texture with pixels :
         spriteBatch.begin();
@@ -125,16 +135,16 @@ public class Application extends ApplicationAdapter {
      * map.
      */
     private boolean processPixel() {
-        boolean isOk = true;
+        /*boolean isOk = true;
 
         // Get color of current pixel :
         Vector3 color = getColor((int) currentScreen.x, (int) currentScreen.y);
 
         // Save color into pixels map :
         pixels.setColor(color.x, color.y, color.z, 1f);
-        pixels.drawPixel((int) currentScreen.x, (int) currentScreen.y);
+        pixels.drawPixel((int) currentScreen.x, (int) currentScreen.y);*/
 
-        return isOk;
+        return true;
     }
 
     /**
@@ -156,16 +166,45 @@ public class Application extends ApplicationAdapter {
     /**
      * Return the color processed with path tracing and Phong method for the given pixel.
      */
-    private Vector3 getColor(int xScreen, int yScreen)
+    private Vector3 getColor(int xScreen, int yScreen, ArrayList<Sphere> scene)
     {
-        Vector3 color = new Vector3(1.f, 0f, 0f); 
+        Vector3 color = new Vector3(0f, 0f, 0f);
+        
+        Ray ray1 = new Ray();
 
-        // Get coords of current pixel, in scene space :
-        tmpVector3.set(xScreen, yScreen, 0);
-        currentScene = viewport.unproject(tmpVector3);
+        //Coord pixel referentiel grille de pixels
+        Vector3 currentPixel = new Vector3(xScreen,yScreen,0);
+        //Pos 3D pixel
+        Vector3 currentScene = camera.unproject(currentPixel);
+        Vector3 posPixel3D = new Vector3(currentScene.x, currentScene.y, 0);
 
-        // To be continued ...
+        //Vecteur direction rayon
+        Vector3 dir = (posPixel3D.sub(camera.position));
+
+        //ray1.origin.set(camera.position);
+        //ray1.direction.set(dir);
+        ray1.set(camera.position, dir);
+        for (int i=0; i<scene.size();i++){
+            if(Intersector.intersectRaySphere(ray1, scene.get(i).center, scene.get(i).radius, null)){
+                color = new Vector3(1f,0.0f,0.0f);
+            }
+        }
 
         return color;
+    }
+
+    /**
+     * Lancer de rayon en parcourant l'ensemble des pixels.
+     */
+    private void lancerRayon(int screenWidth, int screenHeight,ArrayList<Sphere> scene)
+    {
+        for (int x = 0; x < screenWidth; x++) {
+            for (int y = 0; y < screenHeight; y++) {
+                Vector3 color = getColor(x, y,scene);
+                pixels.setColor(color.x, color.y, color.z, 1f);
+                pixels.drawPixel(x, y);
+            }
+        }
+
     }
 }
