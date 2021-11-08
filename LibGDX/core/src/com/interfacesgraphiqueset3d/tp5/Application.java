@@ -33,6 +33,7 @@ public class Application extends ApplicationAdapter {
     private int screenWidth;
     private int screenHeight;
     private ArrayList<Sphere> scene;
+    Vector3[] tabcolor;
 
     @Override
     public void create() {
@@ -50,8 +51,23 @@ public class Application extends ApplicationAdapter {
         // Initialisation des objets lampe(position,color)
         //Lampe lampe1 = new Lampe(direction, radius, direction);
         Sphere sphere1 = new Sphere(centerSphere, radius);
+        Sphere sphere2 = new Sphere(new Vector3(1f, 1f, 10f), 1f);
+        Sphere sphere3 = new Sphere(new Vector3(0f, 1f, 20f), 0.5f);
 
         scene.add(sphere1);
+        scene.add(sphere2);
+        scene.add(sphere3);
+
+        tabcolor = new Vector3[scene.size()];
+        Float red = 1f;
+        Float green = 0f;
+        Float blue = 0f;
+        for(int i=0;i<scene.size();i++){
+            red = (float) (0f + (Math.random() * ((1 - 0) + 1)));
+            green = (float) (0 + (Math.random() * ((1 - 0) + 1)));
+            blue = (float) (0 + (Math.random() * ((1 - 0) + 1))); 
+            tabcolor[i]= new Vector3(red,green,blue);
+        }
 
 
         // Create a camera with perspective view :
@@ -113,7 +129,8 @@ public class Application extends ApplicationAdapter {
 
         // Process pixels color :
         //processPixel();
-        lancerRayon(screenWidth, screenHeight, scene);
+        
+        lancerRayon(screenWidth, screenHeight, scene, tabcolor);
 
         textureWithPixels.draw(pixels,0,0);
 
@@ -166,7 +183,7 @@ public class Application extends ApplicationAdapter {
     /**
      * Return the color processed with path tracing and Phong method for the given pixel.
      */
-    private Vector3 getColor(int xScreen, int yScreen, ArrayList<Sphere> scene)
+    private Vector3 getColor(int xScreen, int yScreen, ArrayList<Sphere> scene, Vector3[] tabcolor)
     {
         Vector3 color = new Vector3(0f, 0f, 0f);
         
@@ -174,6 +191,7 @@ public class Application extends ApplicationAdapter {
 
         //Coord pixel referentiel grille de pixels
         Vector3 currentPixel = new Vector3(xScreen,yScreen,0);
+
         //Pos 3D pixel
         Vector3 currentScene = camera.unproject(currentPixel);
         Vector3 posPixel3D = new Vector3(currentScene.x, currentScene.y, 0);
@@ -181,13 +199,19 @@ public class Application extends ApplicationAdapter {
         //Vecteur direction rayon
         Vector3 dir = (posPixel3D.sub(camera.position));
 
-        //ray1.origin.set(camera.position);
-        //ray1.direction.set(dir);
+        //Set the ray
         ray1.set(camera.position, dir);
+        
+        
+        
+        
+        //tabcolor[0]= new Vector3(red,green,blue);
         for (int i=0; i<scene.size();i++){
+            
             if(Intersector.intersectRaySphere(ray1, scene.get(i).center, scene.get(i).radius, null)){
-                color = new Vector3(1f,0.0f,0.0f);
+                color = tabcolor[i];
             }
+
         }
 
         return color;
@@ -196,11 +220,12 @@ public class Application extends ApplicationAdapter {
     /**
      * Lancer de rayon en parcourant l'ensemble des pixels.
      */
-    private void lancerRayon(int screenWidth, int screenHeight,ArrayList<Sphere> scene)
+    private void lancerRayon(int screenWidth, int screenHeight,ArrayList<Sphere> scene,Vector3[] tabcolor)
     {
+        
         for (int x = 0; x < screenWidth; x++) {
-            for (int y = 0; y < screenHeight; y++) {
-                Vector3 color = getColor(x, y,scene);
+            for (int y = 0; y < screenHeight; y++) {                
+                Vector3 color = getColor(x, y,scene,tabcolor);
                 pixels.setColor(color.x, color.y, color.z, 1f);
                 pixels.drawPixel(x, y);
             }
